@@ -130,26 +130,30 @@ jobs:
               event="MOJGHCPHack4Testers" \
               created="$(date -u +%Y-%m-%d)"
 
-      - name: Note about Federated Credentials
+      - name: Create Federated Credential for Team Repo
         run: |
           REPO_NAME="${{ steps.validate.outputs.repo_name }}"
           CRED_NAME="Team-${REPO_NAME}"
           SUBJECT="repo:${{ env.ORG_NAME }}/${REPO_NAME}:ref:refs/heads/main"
           
-          echo "📋 Federated credential required:"
-          echo "   Name: $CRED_NAME"
-          echo "   Subject: $SUBJECT"
-          echo ""
-          echo "ℹ️  Admins must create this credential manually using:"
-          echo "   az ad app federated-credential create \\"
-          echo "     --id bdd6c623-ba2d-414b-a84b-35af120660ab \\"
-          echo "     --parameters '{"
-          echo "       \"name\": \"$CRED_NAME\","
-          echo "       \"issuer\": \"https://token.actions.githubusercontent.com\","
-          echo "       \"subject\": \"$SUBJECT\","
-          echo "       \"audiences\": [\"api://AzureADTokenExchange\"],"
-          echo "       \"description\": \"OIDC for $REPO_NAME deployment from main branch\""
-          echo "     }'"
+          # Check if credential already exists
+          if az ad app federated-credential show \
+            --id ${{ secrets.AZURE_CLIENT_ID }} \
+            --federated-credential-id "$CRED_NAME" &>/dev/null; then
+            echo "⚠️ Credential $CRED_NAME already exists, skipping..."
+          else
+            echo "Creating federated credential: $CRED_NAME"
+            az ad app federated-credential create \
+              --id ${{ secrets.AZURE_CLIENT_ID }} \
+              --parameters "{
+                \"name\": \"$CRED_NAME\",
+                \"issuer\": \"https://token.actions.githubusercontent.com\",
+                \"subject\": \"$SUBJECT\",
+                \"audiences\": [\"api://AzureADTokenExchange\"],
+                \"description\": \"OIDC for $REPO_NAME deployment from main branch\"
+              }"
+            echo "✅ Federated credential created: $CRED_NAME"
+          fi
 
       - name: Create Team Repository
         env:
