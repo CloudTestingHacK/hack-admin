@@ -157,13 +157,14 @@ jobs:
           REPO_NAME: ${{ steps.validate.outputs.repo_name }}
           ORG: ${{ env.ORG_NAME }}
           SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TENANT_ID: f0380713-9d98-4d52-bbb0-abb7dc56c958
         run: |
           git clone https://oauth2:$GH_TOKEN@github.com/$ORG/$REPO_NAME.git
           cd $REPO_NAME
           
           # Create README
-          cat > README.md << EOF
-          # Team $TEAM_NAME - MOJGHCPHack4Testers
+          cat > README.md << 'EOFREADME'
+          # Team TEAM_NAME_PLACEHOLDER - MOJGHCPHack4Testers
           
           Welcome to your team's repository! Everything is set up and ready to deploy to Azure.
           
@@ -173,14 +174,14 @@ jobs:
           
           | Resource | Value |
           |----------|-------|
-          | **Resource Group** | \`$RG_NAME\` |
-          | **Location** | \`$LOCATION\` |
+          | **Resource Group** | `RG_NAME_PLACEHOLDER` |
+          | **Location** | `LOCATION_PLACEHOLDER` |
           | **Subscription** | MOJGHCPHack4Testers |
           
           ### 🔗 Quick Links
           
-          - **[Open Resource Group in Azure Portal](https://portal.azure.com/#@f0380713-9d98-4d52-bbb0-abb7dc56c958/resource/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/overview)**
-          - **[View Subscription](https://portal.azure.com/#@f0380713-9d98-4d52-bbb0-abb7dc56c958/resource/subscriptions/$SUBSCRIPTION_ID/overview)**
+          - **[Open Resource Group in Azure Portal](https://portal.azure.com/#@TENANT_ID_PLACEHOLDER/resource/subscriptions/SUBSCRIPTION_ID_PLACEHOLDER/resourceGroups/RG_NAME_PLACEHOLDER/overview)**
+          - **[View Subscription](https://portal.azure.com/#@TENANT_ID_PLACEHOLDER/resource/subscriptions/SUBSCRIPTION_ID_PLACEHOLDER/overview)**
           
           ---
           
@@ -190,34 +191,34 @@ jobs:
           
           ### Quick Deploy:
           
-          1. **Edit \`infra/main.bicep\`** - Add your Azure resources (examples below)
-          2. **Commit and push** to the \`main\` branch
+          1. **Edit `infra/main.bicep`** - Add your Azure resources (examples below)
+          2. **Commit and push** to the `main` branch
           3. **GitHub Actions automatically deploys** to Azure
           4. **Check the Actions tab** to see deployment progress
           
           ### 📋 Example: Deploy a Storage Account
           
-          Edit \`infra/main.bicep\` and add:
+          Edit `infra/main.bicep` and add:
           
-          \`\`\`bicep
+          ```bicep
           targetScope = 'resourceGroup'
           param location string = resourceGroup().location
           
           resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-            name: 'st${uniqueString(resourceGroup().id)}'
+            name: 'st\${uniqueString(resourceGroup().id)}'
             location: location
             sku: {
               name: 'Standard_LRS'
             }
             kind: 'StorageV2'
           }
-          \`\`\`
+          ```
           
           ### 📋 Example: Deploy a Web App
           
-          \`\`\`bicep
+          ```bicep
           resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
-            name: 'plan-${uniqueString(resourceGroup().id)}'
+            name: 'plan-\${uniqueString(resourceGroup().id)}'
             location: location
             sku: {
               name: 'B1'
@@ -226,13 +227,13 @@ jobs:
           }
           
           resource webApp 'Microsoft.Web/sites@2023-01-01' = {
-            name: 'app-${uniqueString(resourceGroup().id)}'
+            name: 'app-\${uniqueString(resourceGroup().id)}'
             location: location
             properties: {
               serverFarmId: appServicePlan.id
             }
           }
-          \`\`\`
+          ```
           
           ---
           
@@ -241,9 +242,9 @@ jobs:
           Your deployments use **Azure Workload Identity (OIDC)** for secure authentication. All credentials are managed as **organization secrets** - no passwords or keys in your code!
           
           The deployment workflow automatically uses:
-          - \`AZURE_CLIENT_ID\` - Service principal (managed by admins)
-          - \`AZURE_TENANT_ID\` - Azure AD tenant (managed by admins)
-          - \`AZURE_SUBSCRIPTION_ID\` - Target subscription (managed by admins)
+          - `AZURE_CLIENT_ID` - Service principal (managed by admins)
+          - `AZURE_TENANT_ID` - Azure AD tenant (managed by admins)
+          - `AZURE_SUBSCRIPTION_ID` - Target subscription (managed by admins)
           
           **You don't need to configure anything - it just works!** ✨
           
@@ -251,7 +252,7 @@ jobs:
           
           ## 📁 Repository Structure
           
-          \`\`\`
+          ```
           .
           ├── .github/
           │   └── workflows/
@@ -260,14 +261,14 @@ jobs:
           │   └── main.bicep              # Your infrastructure code
           ├── .gitignore
           └── README.md                   # This file
-          \`\`\`
+          ```
           
           ---
           
           ## 🔍 Monitoring Deployments
           
           - **GitHub Actions**: Go to the [Actions tab](../../actions) to see deployment logs
-          - **Azure Portal**: Use the [Resource Group link](https://portal.azure.com/#@f0380713-9d98-4d52-bbb0-abb7dc56c958/resource/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/overview) to view deployed resources
+          - **Azure Portal**: Use the [Resource Group link](https://portal.azure.com/#@TENANT_ID_PLACEHOLDER/resource/subscriptions/SUBSCRIPTION_ID_PLACEHOLDER/resourceGroups/RG_NAME_PLACEHOLDER/overview) to view deployed resources
           
           ---
           
@@ -289,7 +290,14 @@ jobs:
           ---
           
           **Happy Hacking! 🚀**
-          EOF
+          EOFREADME
+          
+          # Replace placeholders
+          sed -i "s|TEAM_NAME_PLACEHOLDER|$TEAM_NAME|g" README.md
+          sed -i "s|RG_NAME_PLACEHOLDER|$RG_NAME|g" README.md
+          sed -i "s|LOCATION_PLACEHOLDER|$LOCATION|g" README.md
+          sed -i "s|SUBSCRIPTION_ID_PLACEHOLDER|$SUBSCRIPTION_ID|g" README.md
+          sed -i "s|TENANT_ID_PLACEHOLDER|$TENANT_ID|g" README.md
           
           # Create workflows
           mkdir -p .github/workflows
