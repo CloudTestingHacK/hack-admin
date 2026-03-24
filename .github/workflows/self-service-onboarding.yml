@@ -147,6 +147,23 @@ jobs:
           gh api --method PUT \
             /orgs/${{ env.ORG_NAME }}/teams/${{ steps.validate.outputs.team_name }}/repos/${{ env.ORG_NAME }}/${{ steps.validate.outputs.repo_name }} \
             -f permission="admin"
+            
+      - name: Add Team Members as Collaborators
+        if: github.event.inputs.team_members != ''
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+        run: |
+          REPO_FULL="${{ env.ORG_NAME }}/${{ steps.validate.outputs.repo_name }}"
+          IFS=',' read -ra MEMBERS <<< "${{ github.event.inputs.team_members }}"
+          for member in "${MEMBERS[@]}"; do
+            member=$(echo "$member" | xargs)
+            if [ -n "$member" ]; then
+              echo "Adding $member as collaborator..."
+              gh api --method PUT \
+                /repos/$REPO_FULL/collaborators/$member \
+                -f permission="push" || echo "⚠️ Could not add $member as collaborator"
+            fi
+          done
 
       - name: Setup Repository Content
         env:
@@ -181,7 +198,6 @@ jobs:
           ### 🔗 Quick Links
           
           - **[Open Resource Group in Azure Portal](https://portal.azure.com/#@TENANT_ID_PLACEHOLDER/resource/subscriptions/SUBSCRIPTION_ID_PLACEHOLDER/resourceGroups/RG_NAME_PLACEHOLDER/overview)**
-          - **[View Subscription](https://portal.azure.com/#@TENANT_ID_PLACEHOLDER/resource/subscriptions/SUBSCRIPTION_ID_PLACEHOLDER/overview)**
           
           ---
           
@@ -196,43 +212,236 @@ jobs:
           3. **GitHub Actions automatically deploys** to Azure
           4. **Check the Actions tab** to see deployment progress
           
-          ### 📋 Example: Deploy a Storage Account
+          ---
           
-          Edit `infra/main.bicep` and add:
+          ## 📋 Deployment Examples
+          
+          ### Example 1: Azure Load Testing - Performance Testing
+          
+          Deploy Azure Load Testing resources to test your applications under load:
           
           ```bicep
           targetScope = 'resourceGroup'
           param location string = resourceGroup().location
+          param loadTestName string = 'loadtest-\${uniqueString(resourceGroup().id)}'
           
+          // Azure Load Testing Resource
+          resource loadTest 'Microsoft.LoadTestService/loadTests@2022-12-01' = {
+            name: loadTestName
+            location: location
+            properties: {
+              description: 'Load testing for TEAM_NAME_PLACEHOLDER'
+            }
+          }
+          
+          // Storage Account for test data and results
           resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-            name: 'st\${uniqueString(resourceGroup().id)}'
+            name: 'stload\${uniqueString(resourceGroup().id)}'
             location: location
             sku: {
               name: 'Standard_LRS'
             }
             kind: 'StorageV2'
+            properties: {
+              allowBlobPublicAccess: false
+            }
           }
+          
+          output loadTestId string = loadTest.id
+          output loadTestName string = loadTest.name
+          output storageAccountName string = storageAccount.name
           ```
           
-          ### 📋 Example: Deploy a Web App
+          ### Example 2: Web App with Application Insights
+          
+          Deploy a web application with monitoring for load testing:
           
           ```bicep
+          targetScope = 'resourceGroup'
+          param location string = resourceGroup().location
+          
+          // Application Insights
+          resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+            name: 'ai-\${uniqueString(resourceGroup().id)}'
+            location: location
+            kind: 'web'
+            properties: {
+              Application_Type: 'web'
+            }
+          }
+          
+          // App Service Plan
           resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
             name: 'plan-\${uniqueString(resourceGroup().id)}'
             location: location
             sku: {
-              name: 'B1'
-              tier: 'Basic'
+              name: 'S1'
+              tier: 'Standard'
+              capacity: 1
             }
           }
           
+          // Web App
           resource webApp 'Microsoft.Web/sites@2023-01-01' = {
             name: 'app-\${uniqueString(resourceGroup().id)}'
             location: location
             properties: {
               serverFarmId: appServicePlan.id
+              siteConfig: {
+                appSettings: [
+                  {
+                    name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+                    value: appInsights.properties.InstrumentationKey
+                  }
+                  {
+                    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+                    value: appInsights.properties.ConnectionString
+                  }
+                ]
+              }
             }
           }
+          
+          output webAppUrl string = 'https://\${webApp.properties.defaultHostName}'
+          output appInsightsName string = appInsights.name
+          ```
+          
+          ### Example 3: Contoso Traders - E-Commerce Testing Setup
+          
+          Complete setup for testing e-commerce applications:
+          
+          ```bicep
+          targetScope = 'resourceGroup'
+          param location string = resourceGroup().location
+          
+          // Cosmos DB for product catalog
+          resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
+            name: 'cosmos-\${uniqueString(resourceGroup().id)}'
+            location: location
+            properties: {
+              databaseAccountOfferType: 'Standard'
+              locations: [
+                {
+                  locationName: location
+                  failoverPriority: 0
+                }
+              ]
+              consistencyPolicy: {
+                defaultConsistencyLevel: 'Session'
+              }
+            }
+          }
+          
+          // Azure Load Testing
+          resource loadTest 'Microsoft.LoadTestService/loadTests@2022-12-01' = {
+            name: 'loadtest-\${uniqueString(resourceGroup().id)}'
+            location: location
+            properties: {
+              description: 'E-commerce load testing'
+            }
+          }
+          
+          // App Service for API
+          resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+            name: 'plan-api-\${uniqueString(resourceGroup().id)}'
+            location: location
+            sku: {
+              name: 'P1v2'
+              tier: 'PremiumV2'
+            }
+          }
+          
+          resource apiApp  'Microsoft.Web/sites@2023-01-01' = {
+            name: 'api-\${uniqueString(resourceGroup().id)}'
+            location: location
+            properties: {
+              serverFarmId: appServicePlan.id
+            }
+          }
+          
+          output apiUrl string = 'https://\${apiApp.properties.defaultHostName}'
+          output loadTestName string = loadTest.name
+          output cosmosAccountName string = cosmosAccount.name
+          ```
+          
+          ### Example 4: Evidence Submission Testing (HMCTS Use Case)
+          
+          Simulate digital evidence upload validation:
+          
+          ```bicep
+          targetScope = 'resourceGroup'
+          param location string = resourceGroup().location
+          
+          // Storage for evidence files
+          resource evidenceStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+            name: 'stevidence\${take(uniqueString(resourceGroup().id), 8)}'
+            location: location
+            sku: {
+              name: 'Standard_GRS'
+            }
+            kind: 'StorageV2'
+            properties: {
+              allowBlobPublicAccess: false
+              minimumTlsVersion: 'TLS1_2'
+            }
+          }
+          
+          // Blob container for uploads
+          resource evidenceContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+            name: '\${evidenceStorage.name}/default/evidence'
+            properties: {
+              publicAccess: 'None'
+            }
+          }
+          
+          // Function App for validation
+          resource funcPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+            name: 'func-plan-\${uniqueString(resourceGroup().id)}'
+            location: location
+            kind: 'functionapp'
+            sku: {
+              name: 'Y1'
+              tier: 'Dynamic'
+            }
+          }
+          
+          resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
+            name: 'func-validate-\${uniqueString(resourceGroup().id)}'
+            location: location
+            kind: 'functionapp'
+            properties: {
+              serverFarmId: funcPlan.id
+              siteConfig: {
+                appSettings: [
+                  {
+                    name: 'AzureWebJobsStorage'
+                    value: 'DefaultEndpointsProtocol=https;AccountName=\${evidenceStorage.name};AccountKey=\${evidenceStorage.listKeys().keys[0].value}'
+                  }
+                  {
+                    name: 'FUNCTIONS_EXTENSION_VERSION'
+                    value: '~4'
+                  }
+                  {
+                    name: 'FUNCTIONS_WORKER_RUNTIME'
+                    value: 'node'
+                  }
+                ]
+              }
+            }
+          }
+          
+          // Load Testing for upload simulation
+          resource loadTest 'Microsoft.LoadTestService/loadTests@2022-12-01' = {
+            name: 'loadtest-evidence-\${uniqueString(resourceGroup().id)}'
+            location: location
+            properties: {
+              description: 'Evidence submission reliability testing'
+            }
+          }
+          
+          output storageAccountName string = evidenceStorage.name
+          output functionAppName string = functionApp.name
+          output loadTestName string = loadTest.name
           ```
           
           ---
