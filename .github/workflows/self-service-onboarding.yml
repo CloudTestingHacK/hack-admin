@@ -368,7 +368,32 @@ jobs:
           
           ---
           
-          ## 📚 Helpful Resources
+          ## 🧪 Testing Resources
+          
+          ### Azure Testing Services
+          
+          Deploy these Azure services for comprehensive testing:
+          
+          - **[Azure App Testing](https://learn.microsoft.com/azure/reliability/testing-overview)** - Test your applications for reliability and performance
+          - **[Azure Load Testing](https://learn.microsoft.com/azure/load-testing/)** - Generate high-scale load and run load tests
+          - **[Azure Chaos Studio](https://learn.microsoft.com/azure/chaos-studio/)** - Improve application resilience through controlled chaos experiments
+          - **[Playwright Testing](https://playwright.dev/)** - End-to-end testing for web applications
+          
+          ### 📖 Guided Exercises
+          
+          Follow these hands-on labs to get started:
+          
+          1. **[Contoso Traders - Cloud Testing Lab](https://github.com/CloudTestingHacK/contosotraders-cloudtesting)**
+             - Deploy a complete e-commerce application
+             - Implement load testing scenarios
+             - Practice cloud testing strategies
+          
+          2. **[Playwright BDD Hands-On Lab](https://github.com/Gwayaboy/PlaywrightHandsOnLab?tab=readme-ov-file#exercise-2-implement-your-bdd-playwright-test)**
+             - Exercise 2: Implement BDD Playwright tests
+             - Learn behavior-driven development with Playwright
+             - Create maintainable test automation
+          
+          ### 📚 Additional Resources
           
           - [Bicep Documentation](https://learn.microsoft.com/azure/azure-resource-manager/bicep/)
           - [Azure Quickstart Templates](https://github.com/Azure/azure-quickstart-templates)
