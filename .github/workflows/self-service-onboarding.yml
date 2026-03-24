@@ -59,3 +59,164 @@ jobs:
           echo "rg_name=$RG_NAME" >> $GITHUB_OUTPUT
           echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
           echo "team_name=$TEAM_NAME" >> $GITHUB_OUTPUT
+
+      - name: Check if team already exists
+        id: check_team
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        run: |
+          if gh api /orgs/${{ env.ORG_NAME }}/teams/${{ steps.validate.outputs.team_name }} &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Team
+        if: steps.check_team.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TEAM_NAME="${{ steps.validate.outputs.team_name }}"
+          echo "ÌøóÔ∏è Creating GitHub team: $TEAM_NAME"
+          gh api --method POST -H "Accept: application/vnd.github+json" \
+            /orgs/${{ env.ORG_NAME }}/teams \
+            -f name="$TEAM_NAME" \
+            -f description="Hackathon team for $TEAM_NAME" \
+            -f privacy="closed"
+          sleep 2
+
+      - name: Add Org Admins to Team
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TEAM_SLUG="${{ steps.validate.outputs.team_name }}"
+          echo "Ì±• Adding organization admins..."
+          IFS=',' read -ra ADMINS <<< "${{ env.ORG_ADMINS }}"
+          for admin in "${ADMINS[@]}"; do
+            admin=$(echo "$admin" | xargs)
+            gh api --method PUT -H "Accept: application/vnd.github+json" \
+              /orgs/${{ env.ORG_NAME }}/teams/$TEAM_SLUG/memberships/$admin \
+              -f role="maintainer" || echo "‚ö†Ô∏è Could not add $admin"
+          done
+
+      - name: Add Team Members
+        if: github.event.inputs.team_members != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TEAM_SLUG="${{ steps.validate.outputs.team_name }}"
+          IFS=',' read -ra MEMBERS <<< "${{ github.event.inputs.team_members }}"
+          for member in "${MEMBERS[@]}"; do
+            member=$(echo "$member" | xargs)
+            [ -n "$member" ] && gh api --method PUT \
+              /orgs/${{ env.ORG_NAME }}/teams/$TEAM_SLUG/memberships/$member \
+              -f role="member" || true
+          done
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create Azure Resource Group
+        run: |
+          az group create \
+            --name "${{ steps.validate.outputs.rg_name }}" \
+            --location "${{ github.event.inputs.azure_location }}" \
+            --tags team="${{ steps.validate.outputs.team_name }}" \
+              event="MOJGHCPHack4Testers" \
+              created="$(date -u +%Y-%m-%d)"
+
+      - name: Create Team Repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST /orgs/${{ env.ORG_NAME }}/repos \
+            -f name="${{ steps.validate.outputs.repo_name }}" \
+            -f description="Hackathon repository for ${{ steps.validate.outputs.team_name }}" \
+            -F private=false -F has_issues=true
+          sleep 3
+
+      - name: Give Team Admin Access
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PUT \
+            /orgs/${{ env.ORG_NAME }}/teams/${{ steps.validate.outputs.team_name }}/repos/${{ env.ORG_NAME }}/${{ steps.validate.outputs.repo_name }} \
+            -f permission="admin"
+
+      - name: Setup Repository Content
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone https://oauth2:$GH_TOKEN@github.com/${{ env.ORG_NAME }}/${{ steps.validate.outputs.repo_name }}.git
+          cd ${{ steps.validate.outputs.repo_name }}
+          
+          # Create README
+          cat > README.md << 'EOF'
+          # Team ${{ steps.validate.outputs.team_name }}
+          
+          Resource Group: \`${{ steps.validate.outputs.rg_name }}\`
+          Location: \`${{ github.event.inputs.azure_location }}\`
+          
+          ## Deploy
+          
+          Edit \`infra/main.bicep\` and push to main branch.
+          EOF
+          
+          # Create workflows
+          mkdir -p .github/workflows
+          cat > .github/workflows/deploy.yml << 'EOF'
+          name: Deploy to Azure
+          on:
+            push:
+              branches: [main]
+          permissions:
+            id-token: write
+            contents: read
+          jobs:
+            deploy:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: azure/login@v2
+                  with:
+                    client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                    tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                    subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+                - run: |
+                    [ -f infra/main.bicep ] && az deployment group create \
+                      --resource-group ${{ steps.validate.outputs.rg_name }} \
+                      --template-file infra/main.bicep || echo "No template"
+          EOF
+          
+          # Create Bicep template
+          mkdir -p infra
+          cat > infra/main.bicep << 'EOF'
+          targetScope = 'resourceGroup'
+          param location string = resourceGroup().location
+          // Add your resources here
+          EOF
+          
+          # Create .gitignore
+          echo ".azure/" > .gitignore
+          echo "*.log" >> .gitignore
+          
+          # Commit
+          git config user.name "Hackathon Bot"
+          git config user.email "noreply@github.com"
+          git add .
+          git commit -m "Initial setup"
+          git branch -M main
+          git push origin main
+
+      - name: Summary
+        run: |
+          echo "## Ìæâ Team Onboarding Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Team: ${{ steps.validate.outputs.team_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: https://github.com/${{ env.ORG_NAME }}/${{ steps.validate.outputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Resource Group: ${{ steps.validate.outputs.rg_name }}" >> $GITHUB_STEP_SUMMARY
