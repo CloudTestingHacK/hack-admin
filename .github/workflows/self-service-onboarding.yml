@@ -130,6 +130,35 @@ jobs:
               event="MOJGHCPHack4Testers" \
               created="$(date -u +%Y-%m-%d)"
 
+      - name: Create Federated Credential for Team Repo
+        run: |
+          REPO_NAME="${{ steps.validate.outputs.repo_name }}"
+          CRED_NAME="Team-${REPO_NAME}"
+          SUBJECT="repo:${{ env.ORG_NAME }}/${REPO_NAME}:ref:refs/heads/main"
+          
+          # Check if credential already exists
+          if az ad app federated-credential show \
+            --id ${{ secrets.AZURE_CLIENT_ID }} \
+            --federated-credential-id "$CRED_NAME" &>/dev/null; then
+            echo "⚠️ Credential $CRED_NAME already exists, updating..."
+            az ad app federated-credential update \
+              --id ${{ secrets.AZURE_CLIENT_ID }} \
+              --federated-credential-id "$CRED_NAME" \
+              --subject "$SUBJECT"
+          else
+            echo "Creating new federated credential: $CRED_NAME"
+            az ad app federated-credential create \
+              --id ${{ secrets.AZURE_CLIENT_ID }} \
+              --parameters "{
+                \"name\": \"$CRED_NAME\",
+                \"issuer\": \"https://token.actions.githubusercontent.com\",
+                \"subject\": \"$SUBJECT\",
+                \"audiences\": [\"api://AzureADTokenExchange\"],
+                \"description\": \"OIDC for $REPO_NAME deployment from main branch\"
+              }"
+          fi
+          echo "✅ Federated credential configured for $REPO_NAME"
+
       - name: Create Team Repository
         env:
           GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
