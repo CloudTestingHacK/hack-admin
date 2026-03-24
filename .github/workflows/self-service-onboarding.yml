@@ -78,7 +78,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TEAM_NAME="${{ steps.validate.outputs.team_name }}"
-          echo "ÌøóÔ∏è Creating GitHub team: $TEAM_NAME"
+          echo "ÔøΩÔøΩÔøΩÔ∏è Creating GitHub team: $TEAM_NAME"
           gh api --method POST -H "Accept: application/vnd.github+json" \
             /orgs/${{ env.ORG_NAME }}/teams \
             -f name="$TEAM_NAME" \
@@ -91,7 +91,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TEAM_SLUG="${{ steps.validate.outputs.team_name }}"
-          echo "Ì±• Adding organization admins..."
+          echo "ÔøΩÔøΩÔøΩ Adding organization admins..."
           IFS=',' read -ra ADMINS <<< "${{ env.ORG_ADMINS }}"
           for admin in "${ADMINS[@]}"; do
             admin=$(echo "$admin" | xargs)
@@ -151,16 +151,21 @@ jobs:
       - name: Setup Repository Content
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEAM_NAME: ${{ steps.validate.outputs.team_name }}
+          RG_NAME: ${{ steps.validate.outputs.rg_name }}
+          LOCATION: ${{ github.event.inputs.azure_location }}
+          REPO_NAME: ${{ steps.validate.outputs.repo_name }}
+          ORG: ${{ env.ORG_NAME }}
         run: |
-          git clone https://oauth2:$GH_TOKEN@github.com/${{ env.ORG_NAME }}/${{ steps.validate.outputs.repo_name }}.git
-          cd ${{ steps.validate.outputs.repo_name }}
+          git clone https://oauth2:$GH_TOKEN@github.com/$ORG/$REPO_NAME.git
+          cd $REPO_NAME
           
           # Create README
-          cat > README.md << 'EOF'
-          # Team ${{ steps.validate.outputs.team_name }}
+          cat > README.md << EOF
+          # Team $TEAM_NAME
           
-          Resource Group: \`${{ steps.validate.outputs.rg_name }}\`
-          Location: \`${{ github.event.inputs.azure_location }}\`
+          Resource Group: \`$RG_NAME\`
+          Location: \`$LOCATION\`
           
           ## Deploy
           
@@ -169,7 +174,7 @@ jobs:
           
           # Create workflows
           mkdir -p .github/workflows
-          cat > .github/workflows/deploy.yml << 'EOF'
+          cat > .github/workflows/deploy.yml << 'EOFWORKFLOW'
           name: Deploy to Azure
           on:
             push:
@@ -189,9 +194,12 @@ jobs:
                     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
                 - run: |
                     [ -f infra/main.bicep ] && az deployment group create \
-                      --resource-group ${{ steps.validate.outputs.rg_name }} \
+                      --resource-group RESOURCE_GROUP_PLACEHOLDER \
                       --template-file infra/main.bicep || echo "No template"
-          EOF
+          EOFWORKFLOW
+          
+          # Replace placeholder with actual resource group
+          sed -i "s/RESOURCE_GROUP_PLACEHOLDER/$RG_NAME/g" .github/workflows/deploy.yml
           
           # Create Bicep template
           mkdir -p infra
@@ -215,7 +223,7 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Ìæâ Team Onboarding Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "## ÔøΩÔøΩÔøΩ Team Onboarding Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Team: ${{ steps.validate.outputs.team_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- Repository: https://github.com/${{ env.ORG_NAME }}/${{ steps.validate.outputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
