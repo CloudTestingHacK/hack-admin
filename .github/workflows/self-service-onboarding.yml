@@ -327,9 +327,16 @@ jobs:
           
           # Replace placeholders with actual values and secret references
           sed -i "s/RESOURCE_GROUP_PLACEHOLDER/$RG_NAME/g" .github/workflows/deploy.yml
-          sed -i 's/CLIENT_ID_SECRET_PLACEHOLDER/\${{ secrets.AZURE_CLIENT_ID }}/g' .github/workflows/deploy.yml
-          sed -i 's/TENANT_ID_SECRET_PLACEHOLDER/\${{ secrets.AZURE_TENANT_ID }}/g' .github/workflows/deploy.yml
-          sed -i 's/SUBSCRIPTION_ID_SECRET_PLACEHOLDER/\${{ secrets.AZURE_SUBSCRIPTION_ID }}/g' .github/workflows/deploy.yml
+          # Build secret reference pattern to avoid GitHub Actions expansion
+          CLIENT_REF="\$"
+          CLIENT_REF="$CLIENT_REF{{ secrets.AZURE_CLIENT_ID }}"
+          TENANT_REF="\$"
+          TENANT_REF="$TENANT_REF{{ secrets.AZURE_TENANT_ID }}"
+          SUB_REF="\$"
+          SUB_REF="$SUB_REF{{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          sed -i "s|CLIENT_ID_SECRET_PLACEHOLDER|$CLIENT_REF|g" .github/workflows/deploy.yml
+          sed -i "s|TENANT_ID_SECRET_PLACEHOLDER|$TENANT_REF|g" .github/workflows/deploy.yml
+          sed -i "s|SUBSCRIPTION_ID_SECRET_PLACEHOLDER|$SUB_REF|g" .github/workflows/deploy.yml
           
           # Create Bicep template
           mkdir -p infra
