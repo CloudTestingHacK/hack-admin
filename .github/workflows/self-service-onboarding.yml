@@ -1,0 +1,61 @@
+name: Self-Service Team Onboarding
+
+on:
+  workflow_dispatch:
+    inputs:
+      team_name:
+        description: 'Team name (lowercase, alphanumeric, hyphens only, e.g., alpha-squad)'
+        required: true
+        type: string
+      team_members:
+        description: 'Team members GitHub usernames (comma-separated, optional - can add later)'
+        required: false
+        type: string
+      azure_location:
+        description: 'Azure region for resources'
+        required: true
+        default: 'ukwest'
+        type: choice
+        options:
+          - ukwest
+          - eastus
+          - westeurope
+          - northeurope
+          - westus
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ORG_ADMINS: "Dominic-Batstone,Paromita-Roy,iancurtis"
+  ORG_NAME: CloudTestingHacK
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate team name
+        id: validate
+        run: |
+          TEAM_NAME="${{ github.event.inputs.team_name }}"
+          
+          if [[ ! "$TEAM_NAME" =~ ^[a-z0-9-]+$ ]]; then
+            echo "❌ Error: Team name must be lowercase, alphanumeric, and hyphens only"
+            exit 1
+          fi
+          
+          if [ ${#TEAM_NAME} -lt 3 ]; then
+            echo "❌ Error: Team name must be at least 3 characters"
+            exit 1
+          fi
+          
+          RG_NAME="rg-hack-${TEAM_NAME}"
+          REPO_NAME="team-${TEAM_NAME}"
+          
+          echo "rg_name=$RG_NAME" >> $GITHUB_OUTPUT
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "team_name=$TEAM_NAME" >> $GITHUB_OUTPUT
