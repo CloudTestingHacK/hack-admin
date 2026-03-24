@@ -1,42 +1,48 @@
 # Hackathon Administration Repository
 
-Welcome to the MOJGHCPHack4Testers hackathon administration repository!
+Welcome to the **MOJGHCPHack4Testers** hackathon administration repository!
 
-## íº€ Self-Service Team Onboarding
+## ğŸš€ Self-Service Team Onboarding
 
 Teams can onboard themselves using the automated workflow.
 
 ### How to Onboard
 
-1. Go to [Actions tab](../../actions/workflows/self-service-onboarding.yml)
-2. Click "Run workflow"
-3. Fill in:
+1. Go to the [Actions tab](../../actions/workflows/self-service-onboarding.yml)
+2. Click **Run workflow**
+3. Fill in the following details:
    - **Team name**: Unique, lowercase (e.g., `alpha-squad`)
    - **Team members**: GitHub usernames, comma-separated (optional)
    - **Azure location**: Select a region
-4. Wait 1-2 minutes
+4. Wait 1â€“2 minutes for the workflow to complete
 
 ### What Gets Created
 
-âœ… GitHub Team with org admins as maintainers
-âœ… Azure Resource Group in selected region
-âœ… GitHub Repository with pre-configured workflows
-âœ… Automated deployment setup
+- âœ… GitHub Team with org admins as maintainers
+- âœ… Azure Resource Group in the selected region
+- âœ… GitHub Repository with pre-configured workflows
+- âœ… Automated deployment setup
 
-## í´ Authentication
+## ğŸ” Authentication
 
-All repositories have access to organization secrets for Azure OIDC authentication.
+All repositories have access to organisation secrets for Azure OIDC authentication.
 
-## í±¥ Admins
+## ğŸ‘¥ Admins
 
-- Dominic Batstone (@Dominic-Batstone)
-- Paromita Roy (@Paromita-Roy)
-- Ian Curtis (@iancurtis)
+- Dominic Batstone ([@Dominic-Batstone](https://github.com/Dominic-Batstone))
+- Paromita Roy ([@Paromita-Roy](https://github.com/Paromita-Roy))
+- Ian Curtis ([@iancurtis](https://github.com/iancurtis))
 
-## í³ Available Regions
+## ğŸŒ Available Regions
 
-- UK West, East US, West Europe, North Europe, West US
+| Region       |
+|--------------|
+| UK West      |
+| East US      |
+| West Europe  |
+| North Europe |
+| West US      |
 
 ---
 
-**Happy Hacking! í¾‰**
+**Happy Hacking! ğŸ‰**
