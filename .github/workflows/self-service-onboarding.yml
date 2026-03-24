@@ -386,6 +386,8 @@ jobs:
           1. **[Contoso Traders - Cloud Testing Lab](https://github.com/CloudTestingHacK/contosotraders-cloudtesting)**
              - Deploy a complete e-commerce application
              - Implement load testing scenarios
+             - Implement functional testing with Playwright
+             - Try out fault injection with Azure Chaos Studio
              - Practice cloud testing strategies
           
           2. **[Playwright BDD Hands-On Lab](https://github.com/Gwayaboy/PlaywrightHandsOnLab?tab=readme-ov-file#exercise-2-implement-your-bdd-playwright-test)**
