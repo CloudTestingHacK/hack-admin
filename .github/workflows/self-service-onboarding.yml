@@ -384,7 +384,8 @@ jobs:
           Follow these hands-on labs to get started:
           
           1. **[Contoso Traders - Cloud Testing Lab](https://github.com/CloudTestingHacK/contosotraders-cloudtesting)**
-             - Deploy a complete e-commerce application
+             - **🌐 Live Demo**: The application is already deployed at [https://contoso-traders-ui2ct325c-cjddh8g4evg7esgv.z03.azurefd.net/](https://contoso-traders-ui2ct325c-cjddh8g4evg7esgv.z03.azurefd.net/)
+             - **Note**: You can explore the deployed app and run tests against it directly. Deployment instructions in the repo are optional - only deploy if you want to use a different subscription.
              - Implement load testing scenarios
              - Implement functional testing with Playwright
              - Try out fault injection with Azure Chaos Studio
